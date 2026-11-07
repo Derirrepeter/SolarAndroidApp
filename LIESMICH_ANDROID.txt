@@ -1,0 +1,157 @@
+Solar Übersicht – Android-App
+=============================
+
+Funktionen
+----------
+Live        alle Anlagen mit Gauges (PV, Verbrauch, Netz, Batterie), Ladestand als
+            Batteriesymbol, PV heute, Gesamt-Karte; offline-Anlagen grau.
+            Antippen einer Anlage öffnet ihre Webseite.
+Verläufe    Tag / Woche / Monat / Jahr mit ◀ ▶, Leistung, Batterie, Ladestand
+            + wählbarer Zusatzwert; einzelne Anlage oder alle aktiven (Summe).
+Summen      letzte 30 Tage, letzte 12 Monate, Anlagenvergleich (kWh) + Balkendiagramm.
+Einstellungen  Abmelden, Abfrage-Intervall, Anlagen ein-/ausblenden.
+
+Anmeldung: wie in der Windows-App mit dem Konto von solar-assistant.io.
+Das Passwort wird (wenn "Angemeldet bleiben") verschlüsselt im Android-Keystore
+gespeichert. Werte werden nur abgefragt, solange die App geöffnet ist.
+
+
+APK bauen
+---------
+Einfach:  build_apk.bat doppelklicken  ->  SolarUebersicht.apk in diesem Ordner.
+(Nutzt das Java aus Android Studio; beim ersten Mal lädt Gradle die Bibliotheken.)
+
+Alternativ in Android Studio:
+1. Android Studio installieren: https://developer.android.com/studio
+   Beim ersten Start den Einrichtungs-Assistenten mit "Standard" durchlaufen
+   (lädt das Android SDK).
+2. Android Studio: "Open" -> diesen Ordner "android-app" wählen.
+   Beim ersten Öffnen lädt Studio Gradle und die Bibliotheken (einige Minuten).
+3. Menü "Build" -> "Build App Bundle(s) / APK(s)" -> "Build APK(s)".
+   Ergebnis: app\build\outputs\apk\debug\app-debug.apk
+
+Auf dem Handy installieren
+--------------------------
+- APK aufs Handy kopieren (USB, Synology Drive, E-Mail …) und antippen.
+- Android fragt einmalig, ob die Installation aus dieser Quelle erlaubt ist -> erlauben.
+- Bei späteren Versionen einfach die neue APK drüber installieren
+  (Einstellungen und Anmeldung bleiben erhalten, solange sie auf demselben
+  Rechner gebaut wurde – die APK ist mit dem Schlüssel dieses Rechners signiert).
+
+Wo ändere ich was? (Ordner app\src\main\java\de\anlagen\solaruebersicht)
+-----------------------------------------------------------------------
+Model.kt          Namen/Einheiten der Werte (GERMAN), Gauge-Skalen (limitsFor),
+                  Plausibilitätsgrenzen (PLAUSIBLE), Zahlenformat (fmt)
+SolarClient.kt    Anmeldung, Standortliste, Freischaltung je Anlage, Abfragen,
+                  Einstellungsseite (SETTING_LABELS), Summen-Spalten (TOTAL_COLUMNS)
+MainViewModel.kt  Abfrage-Schleife, Offline-Behandlung, Laden von Verläufen/Summen, Demo
+Components.kt     Gauge, Batteriesymbol, Diagramme, Tabellen, Farben (C, socColor)
+Screens.kt        die vier Bildschirme (Live, Verläufe, Summen, Einstellungen)
+MainActivity.kt   Rahmen der App, Reiter unten, Farbschema
+Prefs.kt          gespeicherte Einstellungen / verschlüsseltes Passwort
+HaClient.kt       Home Assistant: Abfragen, Vorlage "Haus" (template())
+HaSettings.kt     Home Assistant: Einstellungsdialog
+Previews.kt       VORSCHAU der Bildschirme in Android Studio (siehe unten)
+app\build.gradle.kts  Versionsnummer (versionCode/versionName), Bibliotheken
+
+Hinweis Synology Drive: Die Ordner "build", "app\build" und ".gradle" entstehen beim
+Bauen, sind groß und müssen nicht synchronisiert werden.
+
+Home Assistant (ab Version 1.2)
+-------------------------------
+Zusätzlich zu den SolarAssistant-Anlagen kann die App Anlagen aus Home Assistant
+anzeigen – im Heimnetz oder unterwegs per VPN (die App nutzt die lokale Adresse).
+1. In Home Assistant: Profil -> Sicherheit -> "Langlebige Zugangstoken" -> Token erstellen.
+2. App: Einstellungen -> "+ Home-Assistant-Anlage hinzufügen". Für das Haus sind
+   Adresse und Sensoren schon vorbelegt; nur das Token einfügen -> "Testen" -> "Speichern".
+3. Die Anlage erscheint als Karte in Live, Verläufe und Summen (und zählt bei "Gesamt" mit).
+- Summen kommen aus der Energie-Dashboard-Konfiguration von Home Assistant.
+- Gauge-Skalen werden aus den Höchstwerten des letzten Jahres ermittelt.
+- Ist Home Assistant nicht erreichbar (VPN aus), zeigt die Karte "nicht erreichbar (VPN?)".
+- Monats-/Jahresverläufe gibt es nur für Sensoren mit Langzeitstatistik in Home Assistant.
+Code: HaClient.kt (Abfragen, Vorlage "template()"), HaSettings.kt (Einstellungsdialog).
+
+Build-Zwischendateien liegen unter %USERPROFILE%\.solaruebersicht-build (nicht im
+Synology-Ordner, weil die Synchronisierung sonst Dateien sperrt).
+
+Bildschirme ansehen und ändern
+------------------------------
+1. Vorschau ohne Handy: in Android Studio die Datei Previews.kt öffnen, oben rechts
+   im Editor auf "Split" (Code + Vorschau) oder "Design" klicken. Dort erscheinen
+   Kopfzeile, Live-Karten (alle Zustände), Gauges/Batterie, Verläufe und Summen
+   mit Beispielwerten. Änderungen in Components.kt/Screens.kt sieht man nach kurzem
+   Warten bzw. "Build & Refresh".
+2. Echte App im Emulator: oben Gerät "Medium Phone" wählen -> grüner Run-Knopf.
+   Mit "Live Edit" (Einstellungen -> Editor -> Live Edit) erscheinen Änderungen an
+   Farben, Texten, Abständen sofort in der laufenden App.
+3. Wo ändern:  Farben -> MainActivity.kt (Brand, LightColors) und Components.kt (C)
+               Live-Karte -> Screens.kt, Funktion SiteCard
+               Gauge / Batterie -> Components.kt, Gauge / BatterySoc
+               Diagramme -> Components.kt, TimeChart / BarChart
+               Texte der Reiter unten -> MainActivity.kt, App()
+
+
+Energiefluss (Live-Seite oben)
+------------------------------
+Wechselrichter in der Mitte, PV links oben, Netz rechts oben, Akku links unten,
+Hausverbrauch rechts unten; wandernde Kugeln zeigen die Flussrichtung, je mehr
+Leistung desto schneller. Code: EnergyFlow.kt (Symbole, Farben, Positionen, Tempo).
+
+Knopf "Flow" / "Gauges" (ab Version 1.4)
+--------------------------------
+Jede Karte (auch Gesamt) hat oben rechts einen Knopf, der die andere Ansicht nennt:
+bei Gauges "Flow", beim Energiefluss "Gauges". Die Wahl wird je Anlage gespeichert.
+Die Gesamt-Karte (= Energiefluss-Summe aller Anlagen online) lässt sich unter
+Einstellungen -> Angezeigte Anlagen -> "Gesamt / Energiefluss-Summe" ausblenden.
+Code: Screens.kt (SiteCard, ViewToggle), Prefs.kt (flowCards).
+
+
+Verbraucher aus Home Assistant (ab Version 1.5)
+--------------------------------------------
+Unter der Karte einer Home-Assistant-Anlage erscheinen Kacheln für Wallbox, LEAF,
+Lüftung und Klimaanlage – mit aktueller Leistung, Energie heute und Zustand
+(z. B. Modus PV, angesteckt/lädt, Vallox-Profil und Temperaturen, Klima-Modus).
+Für das Haus sind die Sensoren vorbelegt (wie im Dashboard "Haus"); ältere
+Einstellungen werden automatisch ergänzt. Ein-/ausschalten: Home-Assistant-Einstellungen
+-> "Verbraucher anzeigen". Sensoren ändern: Extras.kt, Funktion Extra.haus().
+"Heute" = Zuwachs des Zählers seit Mitternacht (aus dem HA-Verlauf, alle 5 min neu).
+
+Energiefluss: je Leitung läuft genau EINE Kugel und zeigt die Richtung. Die Menge
+zeigt die Leitung selbst: dünn = wenig, dick = viel Leistung (3 bis 14 Punkte,
+voll ab 10 kW); die Kugel wird dabei schneller. Unter 50 W: graue Linie, keine Kugel.
+Code: EnergyFlow.kt, Funktion flow() (Dicke: width, Tempo: speed).
+Symbole (ab Version 1.10): weißer Kreis mit farbigem Doppelring, darin ein Strich-Symbol
+(Solarmodul mit Sonne, Strommast, Batterie mit Ladestand in %, Haus mit Blitz),
+darunter Leistung und Einheit; die Bezeichnung steht außen am Kreis.
+
+
+Betriebsmodus und Störung (ab Version 1.6)
+----------------------------------------
+Für SolarAssistant-Anlagen steht oben in der Karte der Betriebsmodus des Wechselrichters,
+wie ihn SolarAssistant auf der Seite "Inverter" zeigt (z. B. "Discharge above 20%",
+"Load first"). Zeigt SolarAssistant dort das Störungssymbol (oder klingt der Modus nach
+Fehler: fault, error, alarm, warn …), wird die Karte rot und es steht "⚠ Störung" darin;
+die Gesamt-Karte zählt die Störungen. Der Modus wird höchstens einmal pro Minute gelesen.
+Hinweis: SolarAssistant speichert keine Fehlercodes und keinen Fehlerverlauf – angezeigt
+wird nur der aktuelle Zustand.
+Code: SolarClient.kt (inverterStatus, parseInverterStatus), Screens.kt (SiteCard).
+
+
+Energie heute an den einzelnen Stellen (ab Version 1.7)
+--------------------------------------------------
+Energiefluss: an jedem Symbol steht zusätzlich die Energie seit Mitternacht –
+PV "heute", Netz "Bezug" und "Einsp.", Akku "geladen" und "entladen", Haus "heute".
+Die Werte stehen immer UNTER dem Symbol (klein, fett); bei Akku und Haus unter Leistung/Bezeichnung.
+Gauges: Zeile "Energie heute (kWh)" mit PV, Haus, Bezug, Einsp., geladen, entladen.
+Die Gesamt-Karte addiert alle Anlagen online. Neu gelesen wird alle 5 Minuten.
+Quelle: SolarAssistant = Stundenwerte seit Mitternacht (inkl. laufender Stunde),
+Home Assistant = 5-Minuten-Statistik des Energie-Dashboards.
+Code: SolarClient.kt / HaClient.kt (todayTotals), EnergyFlow.kt (today), Screens.kt (EnergyTodayRow).
+
+
+Leitungen rechtwinklig (ab Version 1.8)
+----------------------------------
+Die Leitungen im Energiefluss laufen wie in einem Schaltplan: von PV/Netz/Akku/Haus
+waagerecht zur Mitte und dann senkrecht von oben bzw. unten in den Wechselrichter
+(links und rechts leicht versetzt). Die Beschriftung "Wechselrichter" steht links daneben.
+Code: EnergyFlow.kt (pvPath/gridPath/battPath/homePath, flow(), pointAlong()).
